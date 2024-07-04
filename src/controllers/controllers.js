@@ -12,9 +12,11 @@ const octokit = new Octokit({
 
 /*
    Función para obtener un usuario de GitHub
-   Parámetros de entrada:
-   - req: objeto de solicitud Express
-   - res: objeto de respuesta Express
+   parámetros:
+   `username` (string) Nombre de usuario de GitHub
+
+   queries:
+   `include_repos` (boolean) incluir la lista de repositorios. include_repos=(bool)
 */
 export const getUser = async (req, res) => {
   const { username } = req.params;
@@ -28,22 +30,11 @@ export const getUser = async (req, res) => {
 
   try {
     // Hacer una solicitud a la API de GitHub para obtener el usuario
-    const { data } = await octokit.users.getByUsername({ username });
+    const { data } = await octokit.users.getByUsername({ username }); // Devuelve los datos del usuario, si no existe error 404
+
     if (include_repos) {
-      const reposResponse = await octokit.repos.listForUser({
-        username,
-      });
-
-      // Mapear los datos básicos de repositorios
-      const repos = reposResponse.data.map((repo) => ({
-        name: repo.name,
-        html_url: repo.html_url,
-        description: repo.description,
-        updated_at: repo.updated_at,
-      }));
-
       // Agregar la lista de repositorios a userData
-      data.repos = repos;
+      data.repos = await getReposBasicInfoList(username);
     }
 
     res.status(200).json(data); // Pedido exitoso
@@ -61,4 +52,104 @@ export const getUser = async (req, res) => {
       });
     }
   }
+};
+
+/*
+   Función para obtener los repositorios de un usuario de GitHub
+   parámetros:
+   `username` (string) Nombre de usuario de GitHub
+
+  queries:
+   `sort` (string) - Criterio para ordenar los repositorios. Valores posibles: `created`, `updated`, `pushed`, `full_name`. Por defecto, `full_name`.
+   `direction` (string) - Dirección de la ordenación. Valores posibles: `asc`, `desc`. Por defecto, `asc`.
+
+   Ejemplo de uso: /api/github/users/username/repos?sort=updated&direction=desc
+*/
+export const getRepos = async (req, res) => {
+  const { username } = req.params;
+  const sort = req.query.sort || 'full_name';
+  const direction = req.query.direction || 'asc';
+
+  if (!isValidGitHubUsername(username)) {
+    return res.status(400).json({
+      message: `400 Bad Request: El parámetro ${username} no es válido.`,
+    });
+  }
+
+  try {
+    const { data } = await octokit.users.getByUsername({ username }); // Verificar si el usuario existe, si no existe error 404
+
+    const reposResponse = await octokit.repos.listForUser({
+      username,
+    });
+
+    // Mapear los datos básicos de repositorios
+    const reposList = reposResponse.data.map((repo) => ({
+      name: repo.name,
+      html_url: repo.html_url,
+      description: repo.description,
+      updated_at: repo.updated_at,
+      created_at: repo.created_at,
+      pushed_at: repo.pushed_at,
+    }));
+
+    // Ordenar la lista de repositorios según el criterio especificado
+    switch (sort) {
+      case 'created':
+        reposList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+      case 'updated':
+        reposList.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        break;
+      case 'pushed':
+        reposList.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
+        break;
+      case 'full_name':
+        reposList.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      default:
+        reposList.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+
+    // Revertir la lista de repositorios si la ordenación es descendente
+    if (direction === 'desc') {
+      reposList.reverse();
+    }
+
+    res.status(200).json(reposList); // Pedido exitoso
+  } catch (error) {
+    if (error.status === 404) {
+      // Si el usuario no existe, devolver un código de estado 404
+      return res.status(404).json({
+        message: "404 Not Found: El nombre de usuario proporcionado no existe.",
+      });
+    } else {
+      console.error("Error fetching repos from GitHub:", error);
+      // Para otros errores, devolver un código de estado 500
+      res.status(500).json({
+        message: "500 Internal Server Error: Error del servidor al procesar la solicitud.",
+      });
+    }
+  }
+};
+
+
+/* 
+  Función para obtener la lista de repositorios de un usuario de GitHub
+*/
+const getReposBasicInfoList = async (username) => {
+  const reposResponse = await octokit.repos.listForUser({
+    username,
+  });
+
+  // Mapear los datos básicos de repositorios
+  const reposList = reposResponse.data.map((repo) => ({
+    name: repo.name,
+    html_url: repo.html_url,
+    description: repo.description,
+    updated_at: repo.updated_at,
+  }));
+
+  return reposList;
 };

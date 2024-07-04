@@ -1,5 +1,5 @@
 import { Router } from "express"; //importamos Router de express que nos ayuda a crear las rutas
-import { getUser } from "../controllers/controllers.js"; //importamos las funciones de auth.controllers.js
+import { getUser, getRepos } from "../controllers/controllers.js"; //importamos las funciones de auth.controllers.js
 
 const router = Router(); //Instanciamos Router
 
@@ -9,6 +9,9 @@ router.get("/", (req, res) => {
   res.send("Rutas de la api"); //enviamos un mensaje
 });
 
-router.get("/github/users/:username", getUser); // Ruta para obtener un usuario de GitHub. query: ?include_repos=true
+
+router.get("/github/users/:username", getUser); // Ruta para obtener un usuario de GitHub. query: include_repos
+router.get("/github/users/:username/repos", getRepos); // Ruta para obtener los repositorios de un usuario de GitHub
+
 
 export default router; //Exportamos las rutas
