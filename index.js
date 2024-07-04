@@ -1,26 +1,13 @@
-import express from "express";
-import { config } from "dotenv";
-import pg from "pg";
+import app from "./app.js"; // Importamos app de app.js
+import { config } from "dotenv"; // Importamos dotenv para gestionar variables de entorno
 
-console.clear();
+console.clear(); // Limpiamos la consola para mantener el log limpio
 
-config();
+config(); // Cargamos las variables de entorno desde el archivo .env
 
-const app = express();
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  // ssl: true
+const PORT = process.env.PORT || 3001; // Definimos que el puerto será el 3001 o el que nos dé el servidor
+
+// Iniciamos el servidor en el puerto definido y mostramos un mensaje de comprobación
+app.listen(PORT, () => {
+  console.log(`>>>>>>>>> Server on port ${PORT}`);
 });
-
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.get("/ping", async (req, res) => {
-    const result =await pool.query("SELECT NOW()"); // Le consulta la fecha actual a la base de datos
-    
-    return res.json(result.rows[0]);
-  });
-
-app.listen(3000);
-console.log("Server running on port 3000");
