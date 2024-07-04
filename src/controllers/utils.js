@@ -20,3 +20,24 @@ export const isValidGitHubUsername = (username) => {
   
     return true;
   }
+
+// Función para validar el nombre de un repositorio de GitHub
+export const isValidGitHubRepoName = (repoName) => {
+    // Expresión regular para verificar caracteres válidos
+    const validRepoNameRegex = /^[a-z\d-]{1,100}$/i;
+  
+    // Verificar longitud del nombre del repositorio
+    if (repoName.length < 1 || repoName.length > 100) {
+      return false;
+    }
+
+    // Verificar caracteres permitidos
+    if (!validRepoNameRegex.test(repoName)) {
+      return false;
+    }
+
+    console.log("Hello")
+  
+    return true;
+  };
+  

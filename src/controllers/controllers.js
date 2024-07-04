@@ -1,7 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { config } from "dotenv";
-
-import { isValidGitHubUsername } from "./utils.js";
+import { isValidGitHubUsername, isValidGitHubRepoName } from "./utils.js";
 
 config(); // Cargar las variables de entorno
 
@@ -11,12 +10,14 @@ const octokit = new Octokit({
 });
 
 /*
-   Función para obtener un usuario de GitHub
+   Descripción: Función para obtener un usuario de GitHub
    parámetros:
    `username` (string) Nombre de usuario de GitHub
 
    queries:
    `include_repos` (boolean) incluir la lista de repositorios. include_repos=(bool)
+
+   Ejemplo de uso: /api/github/user/username?include_repos=true
 */
 export const getUser = async (req, res) => {
   const { username } = req.params;
@@ -45,7 +46,6 @@ export const getUser = async (req, res) => {
         message: "404 Not Found: El nombre de usuario proporcionado no existe.",
       });
     } else {
-      console.error("Error fetching user from GitHub:", error);
       // Para otros errores, devolver un código de estado 500
       res.status(500).json({
         message: "500 Internal Server Error: Error del servidor al procesar la solicitud.",
@@ -55,7 +55,7 @@ export const getUser = async (req, res) => {
 };
 
 /*
-   Función para obtener los repositorios de un usuario de GitHub
+   Descripción: Función para obtener los repositorios de un usuario de GitHub
    parámetros:
    `username` (string) Nombre de usuario de GitHub
 
@@ -63,7 +63,7 @@ export const getUser = async (req, res) => {
    `sort` (string) - Criterio para ordenar los repositorios. Valores posibles: `created`, `updated`, `pushed`, `full_name`. Por defecto, `full_name`.
    `direction` (string) - Dirección de la ordenación. Valores posibles: `asc`, `desc`. Por defecto, `asc`.
 
-   Ejemplo de uso: /api/github/users/username/repos?sort=updated&direction=desc
+   Ejemplo de uso: /api/github/user/username/repos?sort=updated&direction=desc
 */
 export const getRepos = async (req, res) => {
   const { username } = req.params;
@@ -125,7 +125,6 @@ export const getRepos = async (req, res) => {
         message: "404 Not Found: El nombre de usuario proporcionado no existe.",
       });
     } else {
-      console.error("Error fetching repos from GitHub:", error);
       // Para otros errores, devolver un código de estado 500
       res.status(500).json({
         message: "500 Internal Server Error: Error del servidor al procesar la solicitud.",
@@ -134,6 +133,51 @@ export const getRepos = async (req, res) => {
   }
 };
 
+/* Descripción: Recupera información detallada sobre un repositorio público específico de un usuario de GitHub.
+Parámetros:
+Path Parameters:
+`:username` (string) - El nombre de usuario de GitHub.
+`:repo` (string) - El nombre del repositorio del que se desea obtener información.
+
+Ejemplo de uso: /api/github/user/:username/repos/:repo
+*/
+export const getRepoDetails = async (req, res) => {
+  const { username, repo } = req.params; // Se piden los parámetros de nombre de ususario y repositorio
+  if (!isValidGitHubUsername(username)) {
+    return res.status(400).json({
+      message: `400 Bad Request: El parámetro ${username} no es válido.`,
+    });
+  }
+
+  if (!isValidGitHubRepoName(repo)) {
+    return res.status(400).json({
+      message: `400 Bad Request: El parámetro ${repo} no es válido.`,
+    });
+  }
+
+  
+
+  try {
+    const { data } = await octokit.repos.get({
+      owner: username,
+      repo,
+    }); // Verificar si el repositorio existe, si no existe error 404
+
+    res.status(200).json(data); // Pedido exitoso con el repositorio
+  } catch (error) {
+    if (error.status === 404) {
+      // Si el repositorio no existe, devolver un código de estado 404
+      return res.status(404).json({
+        message: "404 Not Found: El repositorio proporcionado no existe.",
+      });
+    } else {
+      // Para otros errores, devolver un código de estado 500
+      res.status(500).json({
+        message: "500 Internal Server Error: Error del servidor al procesar la solicitud.",
+      });
+    }
+  }
+};
 
 /* 
   Función para obtener la lista de repositorios de un usuario de GitHub
