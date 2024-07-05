@@ -1,12 +1,18 @@
-import { Router } from "express"; //importamos Router de express que nos ayuda a crear las rutas
-import { getUser, getRepos, getRepoDetails } from "../controllers/controllers.js"; //importamos las funciones de auth.controllers.js
+import { Router } from "express";
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getUser, getRepos, getRepoDetails } from "../controllers/controllers.js";
 
-const router = Router(); //Instanciamos Router
+const router = Router();
 
+// Obtener el directorio actual en ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ruta para la raíz de la API, sirve el archivo HTML
 router.get("/", (req, res) => {
-  console.log("Rutas de la api");
-  //creamos una ruta get para la raiz de nuestro servidor
-  res.send("Rutas de la api"); //enviamos un mensaje
+  console.log("Rutas de la API");
+  res.sendFile(path.join(__dirname, '../../public', 'index.html'));  // Se envia el archivo HTML con la documentación
 });
 
 
